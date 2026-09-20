@@ -42,6 +42,7 @@
 #include <sys/resource.h>
 #include <fstream>
 #include <shared_mutex>
+#include <chrono>
 
 using std::pair;
 
@@ -2154,6 +2155,8 @@ VecSimQueryReply *HNSWIndex<DataType, DistType>::topKQuery(const void *query_dat
             query_ef = queryParams->hnswRuntimeParams.efRuntime;
         }
     }
+    // Adding a clock here
+    auto start = std::chrono::steady_clock::now();
 
     idType bottom_layer_ep = searchBottomLayerEP(processed_query, timeoutCtx, &rep->code);
     if (VecSim_OK != rep->code || bottom_layer_ep == INVALID_ID) {
@@ -2167,6 +2170,12 @@ VecSimQueryReply *HNSWIndex<DataType, DistType>::topKQuery(const void *query_dat
     candidatesLabelsMaxHeap<DistType> *results;
     results = searchBottomLayer_WithTimeout(bottom_layer_ep, processed_query, std::max(query_ef, k),
                                             k, timeoutCtx, &rep->code);
+
+    // calculating duration
+    auto end = std::chrono::steady_clock::now();
+    auto elapsed_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+
+    std::cerr << "\t===> HNSW_TIME (in ns) : " << elapsed_time << std::endl;
 
     if (VecSim_OK == rep->code) {
         rep->results.resize(results->size());
